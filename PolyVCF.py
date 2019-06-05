@@ -63,6 +63,10 @@ def main():
     else:
         group = [ samples ]
         pops = [ "all" ]
+    if any([ len(x) == 0 for x in group ]):
+        print "samples: ",samples
+        print "pops: ",pops
+        parser.error("There is one or more groups that were not found in the samples.")
     w = args.window
     ploidy = args.ploidy
 
@@ -75,40 +79,44 @@ def main():
     print "chr\tstart\tend\tpop\tsegsites\tpi\ttheta\ttajimasD" # header
     for c in contigs:
         stop = 0 # initialize stopping rule
-        vfirst = vcf.fetch(c).next() # get first element of VCF for each contig
-        fpos = rounddown(vfirst.pos, w) + 1  # first position
-        lpos = fpos + (w-1) # last position
-        vlast = getLast(vcf.fetch(c)) # get last element of VCF for each contig
-        while stop != 1:
-            # first check if there is data in the interval
-            v_check = vcf.fetch(c, fpos, lpos)
-            try:
-                v_check.next()
-            except StopIteration:
-                # if not slide the window
-                fpos = lpos + 1
-                lpos = fpos + w
-            else:
-                # loop through intervals that have data
-                v_good = vcf.fetch(c, fpos, lpos)
-                sfs = copy.deepcopy(sfs_base) # deep copy of the sfs list
-                sfs = getCounts(sfs, v_good, group) # count frequency of variants
-                printVar(sfs, group, c, fpos, lpos, pops, w) # print result
-                # check if there is data in the next interval
-                v_check = vcf.fetch(c, lpos+1, lpos+w)
+        try:
+            vfirst = vcf.fetch(c).next() # get first element of VCF for each contig
+        except StopIteration:
+            pass
+        else:
+            fpos = rounddown(vfirst.pos, w) + 1  # first position
+            lpos = fpos + (w-1) # last position
+            vlast = getLast(vcf.fetch(c)) # get last element of VCF for each contig
+            while stop != 1:
+                # first check if there is data in the interval
+                v_check = vcf.fetch(c, fpos, lpos)
                 try:
                     v_check.next()
                 except StopIteration:
-                    if lpos+1 > vlast.pos: # stop if the next interval is greater than the last position
-                        stop = 1
+                    # if not slide the window
+                    fpos = lpos + 1
+                    lpos = fpos + w
+                else:
+                    # loop through intervals that have data
+                    v_good = vcf.fetch(c, fpos, lpos)
+                    sfs = copy.deepcopy(sfs_base) # deep copy of the sfs list
+                    sfs = getCounts(sfs, v_good, group) # count frequency of variants
+                    printVar(sfs, group, c, fpos, lpos, pops, w) # print result
+                    # check if there is data in the next interval
+                    v_check = vcf.fetch(c, lpos+1, lpos+w)
+                    try:
+                        v_check.next()
+                    except StopIteration:
+                        if lpos+1 >= vlast.pos: # stop if the next interval is greater than the last position
+                            stop = 1
+                        else:
+                            # slide window
+                            fpos = lpos + 1
+                            lpos = lpos + w
                     else:
                         # slide window
                         fpos = lpos + 1
                         lpos = lpos + w
-                else:
-                    # slide window
-                    fpos = lpos + 1
-                    lpos = lpos + w
 
 # functions
 
