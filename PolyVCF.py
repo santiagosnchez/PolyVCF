@@ -141,7 +141,7 @@ def getLast(x): # get last item in iterator
         pass
     return i
 
-def rounddown(x, w): # get the closest integer to the first allele                               
+def rounddown(x, w): # get the closest integer to the first variant                               
     return int(math.floor(x / float(w))) * w
 
 def polymorphism(sfs,seqlen): # estimate polymorphism metrics
